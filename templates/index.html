@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>EduGenie - Learning Assistant</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header>
+            <h1>🎓 EduGenie</h1>
+            <p>Google Gemini Powered Learning Assistant</p>
+        </header>
+
+        <main>
+
+            <label for="task">Choose a Task</label>
+
+            <select id="task">
+                <option value="qa">Ask a Question</option>
+                <option value="explain">Explain a Topic</option>
+                <option value="quiz">Generate Quiz</option>
+                <option value="summarize">Summarize Text</option>
+                <option value="learn">Learning Recommendations</option>
+            </select>
+
+
+            <label for="userInput">
+                Enter your question or topic
+            </label>
+
+            <textarea
+                id="userInput"
+                rows="8"
+                placeholder="Type your question, topic, or text here..."
+            ></textarea>
+
+
+            <div id="levelContainer">
+
+                <label for="level">
+                    Learning Level
+                </label>
+
+                <select id="level">
+
+                    <option value="beginner">
+                        Beginner
+                    </option>
+
+                    <option value="intermediate">
+                        Intermediate
+                    </option>
+
+                    <option value="advanced">
+                        Advanced
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button id="submitButton">
+                Generate
+            </button>
+
+
+            <div class="result-section">
+
+                <h2>Result</h2>
+
+                <div id="result">
+                    Your result will appear here.
+                </div>
+
+                <button id="copyButton">
+                    Copy Result
+                </button>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script>
+
+        const task =
+            document.getElementById("task");
+
+        const userInput =
+            document.getElementById("userInput");
+
+        const level =
+            document.getElementById("level");
+
+        const levelContainer =
+            document.getElementById("levelContainer");
+
+        const submitButton =
+            document.getElementById("submitButton");
+
+        const result =
+            document.getElementById("result");
+
+        const copyButton =
+            document.getElementById("copyButton");
+
+
+        // Learning Level
+        task.addEventListener("change", function () {
+
+            if (task.value === "learn") {
+
+                levelContainer.style.display = "block";
+
+            } else {
+
+                levelContainer.style.display = "none";
+
+            }
+
+        });
+
+
+        // Generate button
+        submitButton.addEventListener("click", async function () {
+
+            const text =
+                userInput.value.trim();
+
+
+            if (!text) {
+
+                result.innerText =
+                    "Please enter something first.";
+
+                return;
+
+            }
+
+
+            result.innerText =
+                "⏳ Generating...";
+
+
+            let endpoint = "";
+
+
+            if (task.value === "qa") {
+
+                endpoint = "/qa";
+
+            }
+            else if (task.value === "explain") {
+
+                endpoint = "/explain";
+
+            }
+            else if (task.value === "quiz") {
+
+                endpoint = "/quiz";
+
+            }
+            else if (task.value === "summarize") {
+
+                endpoint = "/summarize";
+
+            }
+            else if (task.value === "learn") {
+
+                endpoint =
+                    "/learn/recommendations";
+
+            }
+
+
+            try {
+
+                const response =
+                    await fetch(endpoint, {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            text: text,
+
+                            level: level.value
+
+                        })
+
+                    });
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    result.innerText =
+                        "❌ Error: " +
+                        (
+                            data.detail ||
+                            "Something went wrong."
+                        );
+
+                    return;
+
+                }
+
+
+                // Quiz
+                if (
+                    task.value === "quiz" &&
+                    data.result &&
+                    data.result.questions
+                ) {
+
+                    displayQuiz(
+                        data.result.questions
+                    );
+
+                }
+
+                // Other tasks
+                else {
+
+                    if (
+                        typeof data.result === "object"
+                    ) {
+
+                        result.innerText =
+                            JSON.stringify(
+                                data.result,
+                                null,
+                                2
+                            );
+
+                    }
+                    else {
+
+                        result.innerText =
+                            data.result ||
+                            "No result received.";
+
+                    }
+
+                }
+
+            }
+            catch (error) {
+
+                result.innerText =
+                    "❌ Could not connect to the server.";
+
+                console.error(error);
+
+            }
+
+        });
+
+
+        // Display Quiz
+        function displayQuiz(questions) {
+
+            result.innerHTML = "";
+
+
+            questions.forEach(
+                function (item, index) {
+
+                    const questionDiv =
+                        document.createElement("div");
+
+                    questionDiv.className =
+                        "quiz-question";
+
+
+                    const questionTitle =
+                        document.createElement("h3");
+
+                    questionTitle.innerText =
+                        `${index + 1}. ${item.question}`;
+
+
+                    questionDiv.appendChild(
+                        questionTitle
+                    );
+
+
+                    item.options.forEach(
+                        function (option) {
+
+                            const optionButton =
+                                document.createElement(
+                                    "button"
+                                );
+
+
+                            optionButton.className =
+                                "quiz-option";
+
+
+                            optionButton.innerText =
+                                option;
+
+
+                            optionButton.addEventListener(
+                                "click",
+                                function () {
+
+                                    if (
+                                        option ===
+                                        item.correct_answer
+                                    ) {
+
+                                        optionButton.innerText =
+                                            "✅ Correct! " +
+                                            option;
+
+                                    }
+                                    else {
+
+                                        optionButton.innerText =
+                                            "❌ Incorrect. " +
+                                            "Correct answer: " +
+                                            item.correct_answer;
+
+                                    }
+
+                                }
+                            );
+
+
+                            questionDiv.appendChild(
+                                optionButton
+                            );
+
+                        }
+                    );
+
+
+                    const explanation =
+                        document.createElement("p");
+
+
+                    explanation.innerText =
+                        "Explanation: " +
+                        item.explanation;
+
+
+                    questionDiv.appendChild(
+                        explanation
+                    );
+
+
+                    result.appendChild(
+                        questionDiv
+                    );
+
+                }
+            );
+
+        }
+
+
+        // Copy Result
+        copyButton.addEventListener(
+            "click",
+            async function () {
+
+                try {
+
+                    await navigator.clipboard.writeText(
+                        result.innerText
+                    );
+
+
+                    copyButton.innerText =
+                        "Copied!";
+
+
+                    setTimeout(
+                        function () {
+
+                            copyButton.innerText =
+                                "Copy Result";
+
+                        },
+                        1500
+                    );
+
+                }
+                catch (error) {
+
+                    alert(
+                        "Could not copy the result."
+                    );
+
+                }
+
+            }
+        );
+
+
+        // Hide Learning Level initially
+        levelContainer.style.display =
+            "none";
+
+    </script>
+
+</body>
+
+</html>
